@@ -1,0 +1,66 @@
+spring:
+  application:
+    name: admin8012-test
+  cloud:
+    nacos:
+      server-addr: 127.0.0.1:8848,127.0.0.1:8849,127.0.0.1:8850
+      username: nacos
+      password: nacos
+      discovery:
+        namespace: hc1job01
+  cache:
+    redis:
+      time-to-live: 600000
+  jackson:
+    time-zone: GMT+8
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url:  jdbc:mysql://localhost:3306/hc1db_admin?useSSL=false&serverTimezone=Asia/Shanghai
+    username: root
+    password: 123456
+    druid:
+      stat-view-servlet: # 开启 Druid Web 监控页面
+        enabled: true
+        login-username: admin
+        login-password: admin123
+        reset-enable: false
+      web-stat-filter: # Web 请求监控过滤
+        enabled: true
+        exclusions: '*.js,*.gif,*.jpg,*.png,*.css,*.ico,/druid/*'
+        url-pattern: /*
+      aop-patterns: com.hc1.admin8012.* # Spring Bean 监控切点
+      filters: stat,wall # 启用统计和防火墙插件
+      filter:
+        stat: # 慢 SQL 监控
+          enabled: true
+          slow-sql-millis: 1000 # 超过1秒记录为慢SQL
+          log-slow-sql: true
+        wall: # SQL 防火墙
+          enabled: true
+          config:
+            drop-table-allow: false # 严禁应用执行 DROP TABLE 删表操作
+server:
+  port: 8012
+  servlet:
+    context-path: /admin8012
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl # 控制台打印底层 SQL (开发环境推荐)
+  type-aliases-package: "com.hc1.admin8012.bean" # 实体类包别名扫描路径
+
+
+feign:
+  client:
+    config:
+      user8011:
+        logger-level: full
+        connect-timeout: 5000
+        read-timeout: 5000
+        request-interceptors:
+          - com.hc1.admin8012.config.FeignRequestInterceptor
