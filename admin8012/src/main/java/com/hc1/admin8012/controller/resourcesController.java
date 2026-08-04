@@ -44,7 +44,6 @@ public class resourcesController {
         List<String> adminNames = adminService.queryPriByAdminId(adminId);
         if(!adminNames.contains("资源管理"))
             return CommonResult.error("无权限");
-        adminContext.removeAdminId();
         return resourcesService.getResourcesList(adminId, keyword, status, sortType, pageNum, pageSize);
     }
 
@@ -63,8 +62,6 @@ public class resourcesController {
             response.getWriter().write("{\"code\":500,\"message\":\"无权限\"}");
             return;
         }
-        adminContext.removeAdminId();
-
         // 通过 Feign 调用 user8011 下载接口
         Response feignResponse = resourcesService.downloadResource(adminId, fileUrl);
         if (feignResponse == null || feignResponse.body() == null) {
@@ -106,21 +103,31 @@ public class resourcesController {
         List<String> adminNames = adminService.queryPriByAdminId(adminId);
         if(!adminNames.contains("资源管理"))
             return CommonResult.error("无权限");
-        adminContext.removeAdminId();
         return resourcesService.getResourceDetail(adminId, fileUrl);
     }
 
-    // 管理员审核文件 0待审核 1 审核未通过 2 审核通过
-    @RequestMapping("/updateStatus")
-    public CommonResult<?> updateStatus(@RequestParam("fileUrl") String fileUrl,@RequestParam("status") int status)
-        {
+    /**
+     * 管理员查看资源评论（通过 Feign 调用 user8011）
+     */
+    @GetMapping("/resourceComments")
+    public CommonResult<?> resourceComments(
+            @RequestParam("targetId") Integer targetId,
+            @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
         Integer adminId = adminContext.getAdminId();
         List<String> adminNames = adminService.queryPriByAdminId(adminId);
         if(!adminNames.contains("资源管理"))
             return CommonResult.error("无权限");
-        adminContext.removeAdminId();
-        if(resourcesService.updateStatus(fileUrl, status).equals("无权限"))
+        return resourcesService.getCommentList(adminId, targetId, pageNum, pageSize);
+    }
+
+    // 管理员审核文件 0待审核 1 审核未通过 2 审核通过
+    @PutMapping("/updateStatus")
+    public CommonResult<?> updateStatus(@RequestParam("fileUrl") String fileUrl, @RequestParam("status") int status) {
+        Integer adminId = adminContext.getAdminId();
+        List<String> adminNames = adminService.queryPriByAdminId(adminId);
+        if (!adminNames.contains("资源管理"))
             return CommonResult.error("无权限");
-        return CommonResult.success("已审核");
+        return resourcesService.updateStatus(fileUrl, status);
     }
 }

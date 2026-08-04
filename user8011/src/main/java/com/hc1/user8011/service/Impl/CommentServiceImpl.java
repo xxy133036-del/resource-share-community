@@ -1,4 +1,4 @@
-package com.hc1.user8011.service.impl;
+package com.hc1.user8011.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -13,8 +13,11 @@ import com.hc1.user8011.service.CommentService;
 import com.hc1.user8011.service.MessageService;
 import com.hc1.user8011.service.UserService;
 import com.hc1.user8011.util.RedisUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -28,6 +31,8 @@ import java.util.stream.Collectors;
  */
 @Service
 public class CommentServiceImpl implements CommentService {
+
+    private static final Logger log = LoggerFactory.getLogger(CommentServiceImpl.class);
 
     @Autowired
     private CommentMapper commentMapper;
@@ -43,6 +48,7 @@ public class CommentServiceImpl implements CommentService {
 
     @Autowired
     private MessageService messageService;
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public CommonResult<?> commentResources(Comment comment) {
         // 存到comment表
@@ -57,6 +63,7 @@ public class CommentServiceImpl implements CommentService {
         return CommonResult.success("评论成功");
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public CommonResult<?> commentComment(Comment comment) {
         // 存到comment表
@@ -107,7 +114,7 @@ public class CommentServiceImpl implements CommentService {
             messageService.sendMessage(message);
         } catch (Exception e) {
             // 通知失败不影响主流程
-            e.printStackTrace();
+            log.error("评论通知发送失败", e);
         }
     }
 

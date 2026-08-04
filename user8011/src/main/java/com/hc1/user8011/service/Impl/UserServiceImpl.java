@@ -1,5 +1,6 @@
-package com.hc1.user8011.service.impl;
+package com.hc1.user8011.service.Impl;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hc1.user8011.bean.*;
 import com.hc1.user8011.mapper.FileMapper;
@@ -7,6 +8,8 @@ import com.hc1.user8011.mapper.UserMapper;
 import com.hc1.user8011.service.MessageService;
 import com.hc1.user8011.service.UserService;
 import com.hc1.user8011.util.RedisUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.dao.DuplicateKeyException;
@@ -15,6 +18,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -33,10 +37,14 @@ import java.util.concurrent.TimeUnit;
  */
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
+
+    private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
+
     @Autowired
     private UserMapper userMapper;
     @Autowired
     private RedisUtil redisUtil;
+
     @Override
     public User selectById(Integer id) {
         User user = userMapper.selectById(id);
@@ -82,9 +90,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     @Override
-    public void reducePointsFiveById(Integer id) {
-        userMapper.reducePointsFiveById(id);
+    public int reducePointsFiveById(Integer id) {
+        int affected = userMapper.reducePointsFiveById(id);
         redisUtil.del("user:" + id);
+        return affected;
     }
 
     @Override
@@ -107,6 +116,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     private FileMapper fileMapper;
     @Autowired
     private MessageService messageService;
+
     /**
      * 1. 检查今天是否已签到
      */
@@ -183,6 +193,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public String addLike(int fileId, int userId) {
         // 原子防重复点赞：setIfAbsent 返回 true 表示首次点赞
@@ -204,6 +215,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         return sendLikeNotification(resource, userId);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public String removeLike(int fileId, int userId) {
         String likeKey = "like:user:" + userId + ":file:" + fileId;
@@ -227,13 +239,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         // 通过 pipeline 批量发送 EXISTS 命令，减少网络往返
         List<Object> results = redisTemplate.executePipelined(
-            (RedisCallback<Object>) connection -> {
-                for (Integer fileId : fileIds) {
-                    String likeKey = "like:user:" + userId + ":file:" + fileId;
-                    connection.exists(likeKey.getBytes(StandardCharsets.UTF_8));
+                (RedisCallback<Object>) connection -> {
+                    for (Integer fileId : fileIds) {
+                        String likeKey = "like:user:" + userId + ":file:" + fileId;
+                        connection.exists(likeKey.getBytes(StandardCharsets.UTF_8));
+                    }
+                    return null; // pipeline 模式下返回值由 executePipelined 统一收集
                 }
-                return null; // pipeline 模式下返回值由 executePipelined 统一收集
-            }
         );
 
         // 结果与 fileIds 顺序一一对应
@@ -253,6 +265,20 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     public void updateUserStatusById(int status, int userId) {
         userMapper.updateUserStatusById(status, userId);
+    }
+
+   /* @Override
+    public Page<User> getUserList(int pageNum, int pageSize) {
+        Page<User> page = new Page<>(pageNum, pageSize);
+        userMapper.searchUsers(page, null, null, null, null);
+        return page;
+    }*/
+
+    @Override
+    public Page<User> getUserListByAdditions(String keyword, Integer status, String startDate, String endDate, int pageNum, int pageSize) {
+        Page<User> page = new Page<>(pageNum, pageSize);
+        userMapper.searchUsers(page, keyword, startDate, endDate, status);
+        return page;
     }
 
     /**
@@ -282,7 +308,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
             messageService.sendMessage(message);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("点赞通知发送失败", e);
         }
         return "点赞成功";
     }

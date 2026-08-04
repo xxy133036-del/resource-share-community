@@ -1,4 +1,4 @@
-package com.hc1.user8011.service.impl;
+package com.hc1.user8011.service.Impl;
 
 import com.hc1.user8011.bean.User;
 import com.hc1.user8011.mapper.LoginMapper;
@@ -6,8 +6,6 @@ import com.hc1.user8011.service.LoginService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * @Author xwj

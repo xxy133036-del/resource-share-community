@@ -32,4 +32,5 @@ public class Message {
     private String createTime;
     private Integer status;       // 0=未读 1=已读
     private String title; // 公告使用
+    private Integer isGlobal; // 0=个人消息 1=全局公告（所有用户可见）
 }

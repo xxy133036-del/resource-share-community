@@ -3,6 +3,8 @@ package com.hc1.user8011.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.hc1.user8011.bean.CommonResult;
 import com.hc1.user8011.bean.File;
+import com.hc1.user8011.bean.Message;
+import com.hc1.user8011.mapper.MessageMapper;
 import com.hc1.user8011.service.IndexService;
 import com.hc1.user8011.util.UserContext;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,7 +12,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 
@@ -24,6 +28,10 @@ import java.util.Map;
 public class IndexController {
     @Autowired
     private IndexService indexService;
+
+    @Autowired
+    private MessageMapper messageMapper;
+
     @GetMapping("/home")
     public CommonResult<?> home(@RequestParam(required = false) String storage,
                                 @RequestParam(defaultValue = "1") int pageNum,
@@ -41,7 +49,9 @@ public class IndexController {
         } else {
             result.put("files", null);
         }
-        UserContext.removeUserId();
+        // 查询全局公告（is_global = 1）
+        List<Message> notices = messageMapper.selectGlobalNotices();
+        result.put("notices", notices != null ? notices : new ArrayList<>());
         return CommonResult.success(result);
     }
 }

@@ -2,9 +2,11 @@ package com.hc1.user8011.controller;
 
 import com.hc1.user8011.bean.CommonResult;
 import com.hc1.user8011.bean.Message;
+import com.hc1.user8011.mapper.MessageMapper;
 import com.hc1.user8011.service.MessageService;
 import com.hc1.user8011.util.RedisUtil;
 import com.hc1.user8011.util.UserContext;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,12 +23,13 @@ public class MessageController {
     private MessageService messageService;
     @Autowired
     private RedisUtil redisUtil;
+    @Autowired
+    private MessageMapper messageMapper;
 
     // ① 聚合摘要 — 返回 3 种类型的总数+预览+未读数
     @GetMapping("/messageSummary")
     public CommonResult<?> messageSummary() {
         int userId = UserContext.getUserId();
-        UserContext.removeUserId();
         return CommonResult.success(messageService.getSummary(userId));
     }
 
@@ -37,7 +40,6 @@ public class MessageController {
             @RequestParam(defaultValue = "1") int pageNum,
             @RequestParam(defaultValue = "10") int pageSize) {
         int userId = UserContext.getUserId();
-        UserContext.removeUserId();
         return CommonResult.success(messageService.getByType(userId, type, pageNum, pageSize));
     }
 
@@ -70,5 +72,26 @@ public class MessageController {
             return CommonResult.success(null);
         }
         return CommonResult.success(notice);
+    }
+
+    // ⑦ 获取公告列表（直接从 message_info 表查 is_global=1 的记录）
+    @GetMapping("/queryNoticeList")
+    public CommonResult<?> queryNoticeList() {
+        List<Message> list = messageMapper.selectGlobalNotices();
+        return CommonResult.success(list != null ? list : new java.util.ArrayList<>());
+    }
+
+    // ⑧ 管理员广播公告：写入一条全局消息（isGlobal=1），所有用户可见
+    @PostMapping("/broadcastNotice")
+    public CommonResult<?> broadcastNotice(@RequestParam String title, @RequestParam String content) {
+        Message notice = new Message();
+        notice.setType(3);
+        notice.setTitle(title);
+        notice.setContent(content);
+        notice.setSenderName("系统管理员");
+        notice.setIsGlobal(1);
+        notice.setStatus(0);
+        messageService.sendMessage(notice);
+        return CommonResult.success("公告已广播");
     }
 }

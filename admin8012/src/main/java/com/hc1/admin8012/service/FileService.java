@@ -3,17 +3,14 @@ package com.hc1.admin8012.service;
 import com.hc1.admin8012.bean.CommonResult;
 import feign.Response;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * @Author xwj
  * @Description 通过 OpenFeign 调用 user8011 模块已有接口（X-Internal-Call 头自动注入）
  *              映射关系一对一，不再需要 user8011 单独建 /admin/* 端点
  */
-@FeignClient(name = "user8011", contextId = "fileFeignClient", path = "/user8011")
+@FeignClient(name = "user8011", contextId = "fileFeignClient", path = "user8011")
 public interface FileService {
 
     /** → user8011 GET /fileList（管理员模式：status=null 查全部，支持 keyword 搜索） */
@@ -33,7 +30,14 @@ public interface FileService {
     @GetMapping("/downloadFile/{fileUrl}")
     Response downloadFile(@PathVariable("fileUrl") String fileUrl);
 
-    @RequestMapping("/updateStatus")
-    String updateStatus(@RequestParam("fileUrl") String fileUrl,@RequestParam("status") int status);
+    @PutMapping("/updateStatus")
+    CommonResult<?> updateStatus(@RequestParam("fileUrl") String fileUrl, @RequestParam("status") int status);
+
+    /** → user8011 GET /getCommentListWithAuthor（管理员模式：查看资源评论） */
+    @GetMapping("/getCommentListWithAuthor")
+    CommonResult<?> getCommentList(
+            @RequestParam(value = "targetId", required = false) Integer targetId,
+            @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize);
 
 }

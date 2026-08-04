@@ -1,6 +1,8 @@
 package com.hc1.user8011.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
@@ -18,6 +20,8 @@ import java.util.Map;
 @Component
 public class RedisNoticeListener implements MessageListener {
 
+    private static final Logger log = LoggerFactory.getLogger(RedisNoticeListener.class);
+
     private static final String LATEST_NOTICE_KEY = "notice:latest";
 
     @Autowired
@@ -32,7 +36,7 @@ public class RedisNoticeListener implements MessageListener {
             // 以 Map 对象存入 Redis，读取时直接返回对象
             redisUtil.set(LATEST_NOTICE_KEY, noticeMap);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("处理公告广播消息失败", e);
         }
     }
 }

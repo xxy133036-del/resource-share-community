@@ -1,5 +1,7 @@
 package com.hc1.user8011.controller;
 
+import com.alibaba.csp.sentinel.annotation.SentinelResource;
+import com.alibaba.csp.sentinel.slots.block.BlockException;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.hc1.user8011.bean.CommonResult;
 import com.hc1.user8011.bean.File;
@@ -12,6 +14,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -27,6 +32,7 @@ import java.util.stream.Collectors;
 @RestController
 public class FileController {
 
+    private static final Logger log = LoggerFactory.getLogger(FileController.class);
 
     @Autowired
     private FileService fileService;
@@ -39,7 +45,6 @@ public class FileController {
                                 @RequestParam("file") MultipartFile file
     ) {
         int userid = UserContext.getUserId();
-        UserContext.removeUserId();
         return  fileService.uploadFile(fileEntity, file, userid);
     }
 
@@ -50,7 +55,6 @@ public class FileController {
     @GetMapping("/downloadFile/{fileUrl}")
     public ResponseEntity<byte[]> downloadFile(@PathVariable("fileUrl") String fileUrl) {
         Integer userId = UserContext.getUserId();
-        UserContext.removeUserId();
         return fileService.downloadFile(fileUrl, userId);
     }
 
@@ -87,10 +91,9 @@ public class FileController {
                     file.setLiked(likeStatusMap.getOrDefault(file.getId(), false));
                 }
             }
-            UserContext.removeUserId();
             return CommonResult.success(page);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("获取资源列表失败, keyword={}, status={}", keyword, status, e);
             return CommonResult.error("获取资源列表失败：" + e.getMessage());
         }
     }
@@ -105,7 +108,7 @@ public class FileController {
             }
             return CommonResult.success(file);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("获取文件详情失败, fileUrl={}", fileUrl, e);
             return CommonResult.error("获取文件详情失败：" + e.getMessage());
         }
     }
@@ -116,23 +119,25 @@ public class FileController {
         try {
             Integer userId = UserContext.getUserId();
             Page<File> page = fileService.getMyFileList(userId, pageNum, pageSize);
-            UserContext.removeUserId();
             return CommonResult.success(page);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("获取我的发布失败", e);
             return CommonResult.error("获取我的发布失败：" + e.getMessage());
         }
     }
 
     @GetMapping("/searchResources")
+    @SentinelResource(value = "searchResourcesLimit",
+            blockHandler = "searchResourcesBlockHandler",
+            fallback = "searchResourcesFallback")
     public CommonResult<?> searchResources(
             @RequestParam(value = "keyword", required = false) String keyword,
             @RequestParam(value = "startDate", required = false) String startDate,
             @RequestParam(value = "endDate", required = false) String endDate,
             @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", defaultValue = "12") Integer pageSize) {
+        Integer userId = UserContext.getUserId();
         try {
-            Integer userId = UserContext.getUserId();
             Page<File> page = fileService.searchFiles(keyword, startDate, endDate, pageNum, pageSize);
             // 批量填充当前用户的点赞状态
             if (userId != null && page.getRecords() != null && !page.getRecords().isEmpty()) {
@@ -143,21 +148,20 @@ public class FileController {
                     file.setLiked(likeStatusMap.getOrDefault(file.getId(), false));
                 }
             }
-            UserContext.removeUserId();
             return CommonResult.success(page);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("搜索资源失败，keyword={}, startDate={}, endDate={}, userId={}",
+                    keyword, startDate, endDate, userId, e);
             return CommonResult.error("搜索失败：" + e.getMessage());
         }
     }
 
-    @RequestMapping("/updateStatus")
-    public String updateStatus(@RequestParam("fileUrl") String fileUrl,@RequestParam("status") int status)
-    {
-        if(!AdminCallContext.isAdminCall())
-            return "无权限";
+    @PutMapping("/updateStatus")
+    public CommonResult<?> updateStatus(@RequestParam("fileUrl") String fileUrl, @RequestParam("status") int status) {
+        if (!AdminCallContext.isAdminCall())
+            return CommonResult.error("无权限");
         fileService.updateStatus(fileUrl, status);
-        return "已审核";
+        return CommonResult.success("已审核");
     }
 
     @GetMapping("/getUserFilesByUserId")
@@ -168,9 +172,19 @@ public class FileController {
             Page<File> page = fileService.getUserFilesByUserId(userId, pageNum, pageSize);
             return CommonResult.success(page);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("获取该用户所发布的资源失败, userId={}", userId, e);
             return CommonResult.error("获取该用户所发布的资源失败：" + e.getMessage());
         }
     }
+    public CommonResult<?> searchResourcesBlockHandler(
+            String keyword, String startDate, String endDate, Integer pageNum, Integer pageSize, BlockException e) {
+        log.warn("searchResources 被限流/降级，keyword={}, e={}", keyword, e.getClass().getSimpleName());
+        return CommonResult.error("当前访问人数较多，请稍后重试");
+    }
 
+    public CommonResult<?> searchResourcesFallback(
+            String keyword, String startDate, String endDate, Integer pageNum, Integer pageSize, Throwable t) {
+        log.error("searchResources 执行异常（fallback），keyword={}, e={}", keyword, t.getMessage(), t);
+        return CommonResult.error("系统繁忙，请稍后重试");
+    }
 }

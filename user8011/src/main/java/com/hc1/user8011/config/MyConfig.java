@@ -106,8 +106,7 @@ public class MyConfig implements WebMvcConfigurer {
                         "/druid/**",
                         "/error/**",
                         "/latestNotice",
-                        "/searchResources",
-                        "/fileList"
+                        "/searchResources"
                 );
     }
 

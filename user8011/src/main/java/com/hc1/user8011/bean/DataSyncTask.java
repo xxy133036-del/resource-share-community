@@ -3,6 +3,8 @@ package com.hc1.user8011.bean;
 import com.hc1.user8011.service.FileService;
 import com.hc1.user8011.service.UserService;
 import com.hc1.user8011.util.RedisUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -12,6 +14,8 @@ import java.util.Map;
 
 @Component
 public class DataSyncTask {
+
+    private static final Logger log = LoggerFactory.getLogger(DataSyncTask.class);
 
     @Autowired
     private RedisUtil redisUtil;
@@ -26,12 +30,12 @@ public class DataSyncTask {
     // 每隔 3 分钟执行一次 (3 * 60 * 1000 = 180000 毫秒)
     @Scheduled(fixedDelay = 180000)
     public void syncRedisToDb() {
-        System.out.println("====== 开始执行定时任务：同步Redis下载量，积分，点赞量，评论量到数据库 ======");
+        log.info("开始执行定时任务：同步Redis下载量，积分，点赞量，评论量到数据库");
         syncFileDownloads();
         syncUserPoints();
         syncFileComments();
         syncFileLikes();
-        System.out.println("====== 定时任务同步完成 ======");
+        log.info("定时任务同步完成");
     }
     /**
      * 同步文件的下载量
@@ -69,7 +73,7 @@ public class DataSyncTask {
             redisUtil.del(processingKey);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("同步文件下载量失败", e);
         }
     }
 
@@ -108,7 +112,7 @@ public class DataSyncTask {
             redisUtil.del(processingKey);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("同步用户积分失败", e);
         }
     }
     /**
@@ -147,7 +151,7 @@ public class DataSyncTask {
             redisUtil.del(processingKey);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("同步文件评论量失败", e);
         }
     }
     /**
@@ -186,7 +190,7 @@ public class DataSyncTask {
             redisUtil.del(processingKey);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("同步文件点赞量失败", e);
         }
     }
 

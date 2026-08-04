@@ -39,6 +39,7 @@
         <hutool.version>5.8.16</hutool.version>
         <java-jwt.version>3.18.2</java-jwt.version>
         <druid.version>1.2.28</druid.version>
+        <sentinel.version>1.8.0</sentinel.version>
     </properties>
 
     <dependencyManagement>
@@ -88,6 +89,18 @@
                 <groupId>com.alibaba</groupId>
                 <artifactId>druid-spring-boot-starter</artifactId>
                 <version>${druid.version}</version>
+            </dependency>
+            <!--sentinel-->
+            <dependency>
+                <groupId>com.alibaba.cloud</groupId>
+                <artifactId>spring-cloud-starter-alibaba-sentinel</artifactId>
+                <version>${spring.cloud.alibaba.version}</version>
+            </dependency>
+            <!-- Sentinel 规则持久化到 Nacos-->
+            <dependency>
+                <groupId>com.alibaba.csp</groupId>
+                <artifactId>sentinel-datasource-nacos</artifactId>
+                <version>${sentinel.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

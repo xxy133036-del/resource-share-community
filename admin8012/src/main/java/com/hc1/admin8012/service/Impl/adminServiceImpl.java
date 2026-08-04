@@ -31,17 +31,9 @@ public class adminServiceImpl implements adminService {
     private adminMapper adminMapper;
 
     @Override
-    public Page<admin> listAdmin(String keyWord, int pageNum, int pageSize) {
-        String safeKeyword = (keyWord == null || keyWord.isEmpty()) ? "all" : keyWord;
-        String adminKey = "admins:" + safeKeyword + ":" + pageNum + ":" + pageSize;
-
-
-        Page<admin> page = (Page<admin>) redisUtil.get(adminKey);
-        if (page != null) {
-            return page;
-        }
-
-        page = adminMapper.getListAdmin(keyWord, null, null, pageNum, pageSize);
+    public Page<admin> listAdmin(String keyWord, String startDate, String endDate, int pageNum, int pageSize) {
+        Page<admin> page = new Page<>(pageNum, pageSize);
+        page = adminMapper.getListAdmin(page,keyWord, startDate, endDate);
         List<admin> adminList = page.getRecords();
 
         if (adminList != null && !adminList.isEmpty()) {
@@ -71,15 +63,6 @@ public class adminServiceImpl implements adminService {
                 admin.setPrivileges(perms);
             }
         }
-
-        // 3. 存入 Redis 缓存（现在权限数据也一起被缓存了）
-        if (adminList != null && !adminList.isEmpty()) {
-            redisUtil.set(adminKey, page, 10 * 60);
-        } else {
-            // 防止缓存穿透
-            redisUtil.set(adminKey, page, 60);
-        }
-
         return page;
     }
 
@@ -88,6 +71,7 @@ public class adminServiceImpl implements adminService {
         return adminMapper.queryPriByAdminId(adminId);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void updateById(admin admin) {
         adminMapper.updateById(admin);
@@ -102,6 +86,7 @@ public class adminServiceImpl implements adminService {
     @Override
     public void insertAdmin(admin admin) {
         List<String> privileges = admin.getPrivileges();
+        admin.setPassword(BCrypt.hashpw(admin.getPassword(), BCrypt.gensalt(10)));
         adminMapper.insertAdmin(admin);
         for (String privilegeName : privileges) {
             adminMapper.insertAdminPrivilege(admin.getId(),

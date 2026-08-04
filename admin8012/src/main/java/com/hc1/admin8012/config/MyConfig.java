@@ -81,7 +81,7 @@ public class MyConfig implements WebMvcConfigurer {
         jackson2JsonRedisSerializer.setObjectMapper(om);
 
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
-                .entryTtl(Duration.ofMillis(600))
+                .entryTtl(Duration.ofMillis(30))
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(redisSerializer))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(jackson2JsonRedisSerializer))
                 .disableCachingNullValues();

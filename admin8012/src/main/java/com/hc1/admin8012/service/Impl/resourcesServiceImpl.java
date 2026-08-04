@@ -3,6 +3,7 @@ package com.hc1.admin8012.service.Impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hc1.admin8012.bean.CommentDTO;
 import com.hc1.admin8012.bean.CommonResult;
 import com.hc1.admin8012.bean.FileDTO;
 import com.hc1.admin8012.service.FileService;
@@ -87,7 +88,31 @@ public class resourcesServiceImpl implements resourcesService {
     }
 
     @Override
-    public String updateStatus(String fileUrl, int status) {
+    public CommonResult getCommentList(Integer adminId, Integer targetId, int pageNum, int pageSize) {
+
+        // 通过 Feign 调用 user8011 的 /getCommentListWithAuthor
+        CommonResult result;
+        try {
+            result = fileService.getCommentList(targetId, pageNum, pageSize);
+        } catch (Exception e) {
+            return CommonResult.error("获取评论列表失败：" + e.getMessage());
+        }
+        // 转换 data 为 Page<CommentDTO>
+        if (result.getCode() == 200 && result.getData() != null) {
+            try {
+                JavaType pageType = objectMapper.getTypeFactory()
+                        .constructParametricType(Page.class, CommentDTO.class);
+                Page<CommentDTO> page = objectMapper.convertValue(result.getData(), pageType);
+                result.setData(page);
+            } catch (Exception e) {
+                return CommonResult.error("数据解析失败：" + e.getMessage());
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public CommonResult<?> updateStatus(String fileUrl, int status) {
         return fileService.updateStatus(fileUrl, status);
     }
 

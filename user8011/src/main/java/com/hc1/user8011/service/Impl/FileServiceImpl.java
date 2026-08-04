@@ -1,4 +1,4 @@
-package com.hc1.user8011.service.impl;
+package com.hc1.user8011.service.Impl;
 
 
 import cn.hutool.core.util.IdUtil;
@@ -10,6 +10,8 @@ import com.hc1.user8011.mapper.FileMapper;
 import com.hc1.user8011.service.FileService;
 import com.hc1.user8011.service.UserService;
 import com.hc1.user8011.util.RedisUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.MediaType;
@@ -30,6 +32,9 @@ import java.util.stream.Collectors;
  */
 @Service
 public class FileServiceImpl  implements FileService {
+
+    private static final Logger log = LoggerFactory.getLogger(FileServiceImpl.class);
+
     @Autowired
     private FileMapper fileMapper;
     @Autowired
@@ -100,9 +105,6 @@ public class FileServiceImpl  implements FileService {
         Page<File> page = new Page<>(pageNum, pageSize);
         // 查自己的文件：不限状态，按最新排序
         fileMapper.searchFiles(page, null, null, null, null, "latest", userId);
-        // 额外过滤：只取当前用户的
-        // 由于 searchFiles SQL 不支持按 user_id 过滤，这里用内存过滤简化（也可加 Mapper 方法）
-        // 实际数据量不大时可行；如需优化，可在 Mapper 加 user_id 参数
 
         List<File> fileList = page.getRecords();
             User currentUser = userService.selectById(userId);
@@ -185,7 +187,7 @@ public class FileServiceImpl  implements FileService {
             return CommonResult.success("成功上传资源！ 请等待审核");
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("上传文件失败, userId={}", userid, e);
             return CommonResult.error("服务器存储异常：" + e.getMessage());
         }
     }
@@ -202,7 +204,7 @@ public class FileServiceImpl  implements FileService {
         try {
             bytes = Files.readAllBytes(file.toPath());
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("读取文件失败, fileUrl={}", fileUrl, e);
             return ResponseEntity.status(500).build();
         }
 
@@ -226,7 +228,10 @@ public class FileServiceImpl  implements FileService {
                 redisUtil.hincr("user:points:cache", String.valueOf(fileOwnerId), 1);
             }
 
-            userService.reducePointsFiveById(userId);
+            int affected = userService.reducePointsFiveById(userId);
+            if (affected == 0) {
+                return ResponseEntity.status(402).build(); // 402 Payment Required — 积分不足
+            }
         }
 
         // 3. 构建响应（用户 + 管理员共用）
@@ -318,7 +323,7 @@ public class FileServiceImpl  implements FileService {
             }
         } catch (Exception e) {
             // 缓存追加失败不影响上传结果
-            e.printStackTrace();
+            log.error("追加首页缓存失败, fileUrl={}", newFile.getFileUrl(), e);
         }
     }
 

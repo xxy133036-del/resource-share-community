@@ -17,5 +17,7 @@ public interface resourcesService {
 
     CommonResult<?> getResourceDetail(Integer adminId, String fileUrl);
 
-    String updateStatus(String fileUrl, int status);
+    CommonResult<?> updateStatus(String fileUrl, int status);
+
+    CommonResult<?> getCommentList(Integer adminId, Integer targetId, int pageNum, int pageSize);
 }

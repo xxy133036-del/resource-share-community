@@ -30,7 +30,7 @@ public interface FileMapper extends BaseMapper<File> {
     @Select("<script>" +
             "SELECT f.* FROM file_info f " +
             "LEFT JOIN user_info u ON f.user_id = u.id " +
-            "WHERE 1=1 " +
+            "<where>" +
             "<if test='userId != null'>" +
             "AND f.user_id = #{userId}" +
             "</if>" +
@@ -48,6 +48,7 @@ public interface FileMapper extends BaseMapper<File> {
             "<if test='endDate != null and endDate != \"\"'>" +
             "AND f.create_time &lt;= CONCAT(#{endDate}, ' 23:59:59') " +
             "</if>" +
+            "</where>" +
             "<choose>" +
             "<when test='sortType == \"hottest\"'>" +
             "ORDER BY (f.downloads_count * 3 + f.likes_count * 2 + f.comments_count) DESC" +
@@ -65,6 +66,6 @@ public interface FileMapper extends BaseMapper<File> {
                           @Param("sortType") String sortType,
                            @Param("userId") Integer userId);
 
-    @Update("update file_info set status = #{status} where fileUrl = #{fileUrl}")
+    @Update("update file_info set status = #{status} where file_url = #{fileUrl}")
     void updateStatus(@Param("fileUrl") String fileUrl,@Param("status") int status);
 }

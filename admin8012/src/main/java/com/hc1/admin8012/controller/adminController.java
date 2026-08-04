@@ -6,6 +6,8 @@ import com.hc1.admin8012.bean.admin;
 import com.hc1.admin8012.bean.privilege;
 import com.hc1.admin8012.service.adminService;
 import com.hc1.admin8012.util.adminContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,12 +23,16 @@ import java.util.List;
 @RestController
 public class adminController {
 
+    private static final Logger log = LoggerFactory.getLogger(adminController.class);
+
     @Autowired
     private adminService adminService;
 
-    @RequestMapping("/listAdmin")
+    @GetMapping("/listAdmin")
     public CommonResult<?> listAdmin(
             @RequestParam(value = "keyWord", required = false) String keyWord,
+            @RequestParam(value = "startDate", required = false) String startDate,
+            @RequestParam(value = "endDate", required = false) String endDate,
             @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", defaultValue = "7") Integer pageSize) {
         try {
@@ -37,16 +43,16 @@ public class adminController {
             {
                 return CommonResult.error("无权限");
             }
-            Page<admin> page = adminService.listAdmin(keyWord, pageNum, pageSize);
+            Page<admin> page = adminService.listAdmin(keyWord,startDate,endDate, pageNum, pageSize);
             return CommonResult.success(page);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("搜索管理员列表失败", e);
             return CommonResult.error("搜索失败：" + e.getMessage());
         }
     }
 
 
-    @RequestMapping("/freeze")
+    @PutMapping("/freeze")
     public CommonResult<?> freeze(@RequestParam("id") Integer id) {
         try {
             Integer adminId = adminContext.getAdminId();
@@ -60,11 +66,11 @@ public class adminController {
             adminService.updateById(admin);
             return CommonResult.success("冻结成功");
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("冻结管理员失败, id={}", id, e);
             return CommonResult.error("冻结失败：" + e.getMessage());
         }
     }
-    @RequestMapping("/thaw")
+    @PutMapping("/thaw")
     public CommonResult<?> thaw(@RequestParam("id") Integer id) {
         try {
             Integer adminId = adminContext.getAdminId();
@@ -78,12 +84,12 @@ public class adminController {
             adminService.updateById(admin);
             return CommonResult.success("解冻成功");
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("解冻管理员失败, id={}", id, e);
             return CommonResult.error("解冻失败：" + e.getMessage());
         }
     }
 
-    @RequestMapping("/insertAdmin")
+    @PostMapping("/insertAdmin")
     public CommonResult<?> insertAdmin(@RequestBody admin admin) {
         try {
             Integer adminId = adminContext.getAdminId();
@@ -101,7 +107,7 @@ public class adminController {
             adminService.insertAdmin(admin);
             return CommonResult.success("添加成功");
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("添加管理员失败", e);
             return CommonResult.error("添加失败：" + e.getMessage());
         }
     }
@@ -118,7 +124,6 @@ public class adminController {
         } else if ("信息不完整".equals(result)) {
             return CommonResult.error("信息不完整");
         }
-        adminContext.removeAdminId();
         return CommonResult.success("更新成功");
     }
 }

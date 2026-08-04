@@ -3,11 +3,16 @@ spring:
     name: admin8012-test
   cloud:
     nacos:
-      server-addr: 127.0.0.1:8848,127.0.0.1:8849,127.0.0.1:8850
-      username: nacos
-      password: nacos
       discovery:
         namespace: hc1job01
+        server-addr: 127.0.0.1:8848,127.0.0.1:8849,127.0.0.1:8850
+        username: nacos
+        password: nacos
+    sentinel:
+      transport:
+        dashboard: localhost:8080
+        port: 8719
+      eager: true
   cache:
     redis:
       time-to-live: 600000
@@ -15,30 +20,31 @@ spring:
     time-zone: GMT+8
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url:  jdbc:mysql://localhost:3306/hc1db_admin?useSSL=false&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://localhost:3306/hc1db_admin?useSSL=false&serverTimezone=Asia/Shanghai
     username: root
     password: 123456
     druid:
-      stat-view-servlet: # 开启 Druid Web 监控页面
+      stat-view-servlet:
         enabled: true
         login-username: admin
         login-password: admin123
         reset-enable: false
-      web-stat-filter: # Web 请求监控过滤
+      web-stat-filter:
         enabled: true
         exclusions: '*.js,*.gif,*.jpg,*.png,*.css,*.ico,/druid/*'
         url-pattern: /*
-      aop-patterns: com.hc1.admin8012.* # Spring Bean 监控切点
-      filters: stat,wall # 启用统计和防火墙插件
+      aop-patterns: com.hc1.admin8012.*
+      filters: stat,wall
       filter:
-        stat: # 慢 SQL 监控
+        stat:
           enabled: true
-          slow-sql-millis: 1000 # 超过1秒记录为慢SQL
+          slow-sql-millis: 1000
           log-slow-sql: true
-        wall: # SQL 防火墙
+        wall:
           enabled: true
           config:
-            drop-table-allow: false # 严禁应用执行 DROP TABLE 删表操作
+            drop-table-allow: false
+
 server:
   port: 8012
   servlet:
@@ -49,13 +55,15 @@ management:
     web:
       exposure:
         include: "*"
+
 mybatis-plus:
   configuration:
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl # 控制台打印底层 SQL (开发环境推荐)
-  type-aliases-package: "com.hc1.admin8012.bean" # 实体类包别名扫描路径
-
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  type-aliases-package: "com.hc1.admin8012.bean"
 
 feign:
+  sentinel:
+    enabled: true
   client:
     config:
       user8011:

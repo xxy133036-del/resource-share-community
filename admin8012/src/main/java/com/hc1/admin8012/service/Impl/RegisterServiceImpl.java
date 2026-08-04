@@ -1,3 +1,4 @@
+/*
 package com.hc1.admin8012.service.Impl;
 
 import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
@@ -30,7 +31,9 @@ public class RegisterServiceImpl implements RegisterService {
         }
         LambdaQueryChainWrapper<admin> wrapper = new LambdaQueryChainWrapper<>(registerMapper);
         long count = wrapper.eq(com.hc1.admin8012.bean.admin::getAdminName, admin.getAdminName()).count();
-        if (count > 0) {
+        if (count > 0) {*/
+/**//*
+
             return "exist";
         }
         String hash = BCrypt.hashpw(admin.getPassword(), BCrypt.gensalt(10));
@@ -45,4 +48,4 @@ public class RegisterServiceImpl implements RegisterService {
         return registerMapper.selectByAdminName(adminName);
     }
 
-}
+}*/

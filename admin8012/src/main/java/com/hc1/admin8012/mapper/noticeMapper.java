@@ -21,7 +21,8 @@ public interface noticeMapper extends BaseMapper<notice> {
     void updateNoticeById(String title, String content, int noticeId);
 
     @Select("<script>" +
-            "SELECT n.* FROM sys_notice n WHERE 1=1 " +
+            "SELECT n.* FROM sys_notice n " +
+            "<where>" +
             "<if test='keyword != null and keyword != \"\"'>" +
             "AND (n.title LIKE CONCAT('%',#{keyword},'%') " +
             "OR n.content LIKE CONCAT('%',#{keyword},'%')) " +
@@ -32,6 +33,7 @@ public interface noticeMapper extends BaseMapper<notice> {
             "<if test='endDate != null and endDate != \"\"'>" +
             "AND n.create_time &lt;= CONCAT(#{endDate}, ' 23:59:59') " +
             "</if>" +
+            "</where>" +
             "ORDER BY n.update_time DESC" +
             "</script>")
     IPage<notice> queryNoticeByAddition(IPage<notice> page,String keyword, String startDate, String endDate);

@@ -1,3 +1,4 @@
+/*
 package com.hc1.admin8012.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
@@ -9,4 +10,4 @@ import org.apache.ibatis.annotations.Select;
 public interface RegisterMapper extends BaseMapper<admin> {
     @Select("select * from sys_admin where admin_name = #{adminName}")
     admin selectByAdminName(String adminName);
-}
+}*/

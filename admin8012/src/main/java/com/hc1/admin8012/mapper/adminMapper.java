@@ -19,10 +19,11 @@ public interface adminMapper extends BaseMapper<admin> {
     List<String> queryPriByAdminId(int adminId);
 
     @Select("<script>" +
-            "SELECT a.* FROM sys_admin a WHERE 1=1 " +
+            "SELECT a.* FROM sys_admin a " +
+            "<where>" +
             "<if test='keyword != null and keyword != \"\"'>" +
             "AND (a.admin_name LIKE CONCAT('%',#{keyword},'%') " +
-            "OR a.role_name LIKE CONCAT('%',#{keyword},'%') " +
+            "OR a.role_name LIKE CONCAT('%',#{keyword},'%')) " +
             "</if>" +
             "<if test='startDate != null and startDate != \"\"'>" +
             "AND a.create_time &gt;= #{startDate} " +
@@ -30,13 +31,13 @@ public interface adminMapper extends BaseMapper<admin> {
             "<if test='endDate != null and endDate != \"\"'>" +
             "AND a.create_time &lt;= CONCAT(#{endDate}, ' 23:59:59') " +
             "</if>" +
+            "</where>" +
             "ORDER BY a.update_time DESC" +
             "</script>")
-    Page<admin> getListAdmin(@Param("keyword") String keyword,
+    Page<admin> getListAdmin(
+            Page<admin> page,@Param("keyword") String keyword,
                            @Param("startDate") String startDate,
-                           @Param("endDate") String endDate,
-                           @Param("pageNum") int pageNum,
-                           @Param("pageSize") int pageSize);
+                           @Param("endDate") String endDate);
 
     @Select("<script>" +
             "SELECT ap.admin_id, p.privilege_name " +
@@ -49,13 +50,14 @@ public interface adminMapper extends BaseMapper<admin> {
             "</script>")
     List<Map<String, Object>> queryPrivilegesByAdminIds(@Param("adminIds") List<Integer> adminIds);
 
-    @Update("update sys_admin set admin_status = #{status} where admin_id = #{adminId}")
+    @Update("update sys_admin set status = #{status} where id = #{id}")
     int updateById(admin admin);
 
     @Select("select admin_name from sys_admin")
     List<String> queryAdminName();
 
     @Insert("insert into sys_admin(admin_name,role_name,password) values(#{adminName},#{roleName},#{password})")
+    @Options(useGeneratedKeys = true, keyProperty = "id")
     void insertAdmin(admin admin);
 
     @Insert("insert into sys_admin_privilege(admin_id,privilege_id) values(#{adminId},#{privilegeId})")
@@ -64,6 +66,6 @@ public interface adminMapper extends BaseMapper<admin> {
     @Select("select id from sys_privilege where privilege_name = #{privilegeName}")
     int queryPrivilegeIdByName(String privilegeName);
 
-    @Update("update sys_admin set admin_name = #{adminName},role_name = #{roleName},password = #{password} where admin_id = #{adminId}")
+    @Update("update sys_admin set admin_name = #{adminName},password = #{password} where id = #{id}")
     void updateAdminById(admin admin);
 }

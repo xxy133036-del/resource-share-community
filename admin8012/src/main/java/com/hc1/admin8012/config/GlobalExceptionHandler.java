@@ -1,6 +1,8 @@
 package com.hc1.admin8012.config;
 
 import com.hc1.admin8012.bean.CommonResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -12,12 +14,14 @@ import javax.servlet.http.HttpServletResponse;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     /**
      * 处理运行时异常 (NullPointerException 属于这个范畴)
      */
     @ExceptionHandler(RuntimeException.class)
     public CommonResult<?> handleRuntimeException(RuntimeException e, HttpServletResponse response) {
-        e.printStackTrace();
+        log.error("运行时异常", e);
 
         String message = e.getMessage();
 
@@ -39,7 +43,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public CommonResult<?> handleException(Exception e, HttpServletResponse response) {
-        e.printStackTrace();
+        log.error("未处理异常", e);
 
         response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         String message = e.getMessage();

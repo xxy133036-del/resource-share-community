@@ -5,11 +5,15 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTCreator;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Date;
 import java.util.Map;
 
 public class JWTUtil {
+
+    private static final Logger log = LoggerFactory.getLogger(JWTUtil.class);
 
     private final static String ENCRYPT_KEY = "jd_hc"; // 加密的密钥
     private final static int EXPIRE_TIME = 60; // token 过期时间，单位分钟
@@ -35,13 +39,13 @@ public class JWTUtil {
             String adminIdStr = jwt.getClaim("id").asString();
 
             if (adminIdStr == null) {
-                System.out.println("====== 严重：Token中未找到 id 字段 ======");
+                log.warn("Token中未找到 id 字段");
                 return null;
             }
 
             return Integer.parseInt(adminIdStr);
         } catch (NumberFormatException e) {
-            System.out.println("====== Token中id字段格式错误：" + e.getMessage() + " ======");
+            log.warn("Token中id字段格式错误：{}", e.getMessage());
             return null;
         }
     }

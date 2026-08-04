@@ -1,4 +1,4 @@
-package com.hc1.user8011.service.impl;
+package com.hc1.user8011.service.Impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.hc1.user8011.bean.File;

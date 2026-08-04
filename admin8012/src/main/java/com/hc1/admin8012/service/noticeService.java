@@ -20,4 +20,6 @@ public interface noticeService {
     void deleteNotice(int noticeId);
 
     void updateNotice(String title,String content,int noticeId);
+
+    void refreshNoticeListCache();
 }

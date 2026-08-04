@@ -1,20 +1,18 @@
 package com.hc1.user8011.controller;
 
 import cn.hutool.core.util.IdUtil;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.hc1.user8011.bean.CommonResult;
-import com.hc1.user8011.bean.File;
 import com.hc1.user8011.bean.User;
 import com.hc1.user8011.service.UserService;
-import com.hc1.user8011.service.impl.UserServiceImpl;
 import com.hc1.user8011.util.AdminCallContext;
 import com.hc1.user8011.util.RedisUtil;
 import com.hc1.user8011.util.UserContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * @Author xwj
@@ -24,6 +22,8 @@ import java.util.Map;
  */
 @RestController
 public class UserController {
+
+    private static final Logger log = LoggerFactory.getLogger(UserController.class);
 
     @Autowired
     private RedisUtil redisUtil;
@@ -51,11 +51,10 @@ public class UserController {
             headimg.transferTo(destFile);
 
             userService.updateUserAvatarById(id, uniqueHeadName);
-            UserContext.removeUserId();
             return CommonResult.success("成功上传头像！");
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("上传头像失败, userId={}", id, e);
             return CommonResult.error("服务器存储异常：" + e.getMessage());
         }
     }
@@ -72,7 +71,6 @@ public class UserController {
         } else if ("信息不完整".equals(result)) {
             return CommonResult.error("信息不完整");
         }
-        UserContext.removeUserId();
         return CommonResult.success("更新成功");
     }
 
@@ -90,7 +88,6 @@ public class UserController {
             userService.addPointsFiveById(id);
             points = 5;
         }
-        UserContext.removeUserId();
         return CommonResult.success("已连续签到 " + streakDays + " 天,获得 " + points + " 积分");
     }
 
@@ -103,7 +100,6 @@ public class UserController {
         } else if ("已点赞".equals(result)) {
             return CommonResult.error("已点赞");
         }
-        UserContext.removeUserId();
         return CommonResult.success("点赞成功");
     }
 
@@ -114,7 +110,6 @@ public class UserController {
         if ("未点赞".equals(result)) {
             return CommonResult.error("未点赞");
         }
-        UserContext.removeUserId();
         return CommonResult.success("取消点赞成功");
     }
 
@@ -122,21 +117,32 @@ public class UserController {
     public CommonResult<?> checkLike(@RequestParam("fileId") int fileId) {
         int userId = UserContext.getUserId();
         boolean liked = userService.checkLike(fileId, userId);
-        UserContext.removeUserId();
         return CommonResult.success(liked);
     }
 
-    @RequestMapping("/updateUserStatus")
-    public CommonResult<?> updateUserStatusById(@RequestParam("status") int status,@RequestParam("userId") int userId) {
-        if(!AdminCallContext.isAdminCall())
+    @PutMapping("/updateUserStatus")
+    public CommonResult<?> updateUserStatusById(@RequestParam("status") int status, @RequestParam("userId") int userId) {
+        if (!AdminCallContext.isAdminCall())
             return CommonResult.error("无权限");
-       userService.updateUserStatusById(status,userId);
+       userService.updateUserStatusById(status, userId);
        return CommonResult.success("修改成功");
     }
 
-    @RequestMapping("/getUserById")
+    @GetMapping("/getUserById")
     public CommonResult<?> getUserById(@RequestParam("userId") int userId) {
         return CommonResult.success(userService.getById(userId));
     }
-}
 
+    @GetMapping("/getUserListByAdditions")
+    public CommonResult<?> getUserListByAdditions(@RequestParam(value = "keyword", required = false) String keyword,
+                                                  @RequestParam(value = "status", required = false) Integer status,
+                                                  @RequestParam(value = "startDate", required = false) String startDate,
+                                                  @RequestParam(value = "endDate", required = false) String endDate,
+                                                  @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
+                                                  @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
+        if (!AdminCallContext.isAdminCall())
+            return CommonResult.error("无权限");
+        Page<User> userList = userService.getUserListByAdditions(keyword, status, startDate, endDate, pageNum, pageSize);
+        return CommonResult.success(userList);
+    }
+}

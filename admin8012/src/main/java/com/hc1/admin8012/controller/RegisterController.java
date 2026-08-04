@@ -1,3 +1,4 @@
+/*
 package com.hc1.admin8012.controller;
 
 import com.hc1.admin8012.bean.CommonResult;
@@ -12,12 +13,14 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.HashMap;
 import java.util.Map;
 
+*/
 /**
  * @Author xwj
  * @Description
  * @Date 2026-06-29 10:00:00
  * @Version 1.0
- */
+ *//*
+
 @RestController
 public class RegisterController {
     @Autowired
@@ -54,3 +57,4 @@ public class RegisterController {
         }
     }
 }
+*/

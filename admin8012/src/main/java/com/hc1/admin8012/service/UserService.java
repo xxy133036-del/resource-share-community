@@ -8,4 +8,6 @@ public interface UserService {
    CommonResult<?> updateUserStatusById(int status,int userId);
    CommonResult<?> getUserById(int userId);
    CommonResult<?> getUserFilesByUserId(Integer pageNum,  Integer pageSize,int userId);
+   /*CommonResult<?> getUserList(Integer pageNum,  Integer pageSize);*/
+   CommonResult<?> getUserListByAdditions(String keyword, Integer status, String startDate, String endDate, Integer pageNum, Integer pageSize);
 }

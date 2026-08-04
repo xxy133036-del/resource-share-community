@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface adminService {
     //分页查询管理员
-    Page<admin> listAdmin(String keyWord,int pageNum,int pageSize);
+    Page<admin> listAdmin(String keyWord,String startDate,String endDate,int pageNum,int pageSize);
     //根据 id 查询 该管理员 的职能
     List<String> queryPriByAdminId(int adminId);
 

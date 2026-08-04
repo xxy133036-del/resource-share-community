@@ -1,3 +1,4 @@
+/*
 package com.hc1.admin8012.service;
 
 import com.hc1.admin8012.bean.admin;
@@ -8,4 +9,4 @@ public interface RegisterService {
 
     admin selectByAdminName(String adminName);
 
-}
+}*/

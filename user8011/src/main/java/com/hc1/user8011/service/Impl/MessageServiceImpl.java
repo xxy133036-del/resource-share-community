@@ -1,4 +1,4 @@
-package com.hc1.user8011.service.impl;
+package com.hc1.user8011.service.Impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.hc1.user8011.bean.Message;
@@ -7,6 +7,7 @@ import com.hc1.user8011.mapper.MessageMapper;
 import com.hc1.user8011.service.MessageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
@@ -29,6 +30,7 @@ public class MessageServiceImpl implements MessageService {
         TYPE_NAMES.put(3, "系统公告");
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void sendMessage(Message message) {
         message.setStatus(0);  // 默认未读
