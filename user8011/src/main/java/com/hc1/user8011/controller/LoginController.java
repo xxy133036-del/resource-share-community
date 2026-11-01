@@ -25,6 +25,9 @@ public class LoginController {
     private LoginService loginService;
     @Autowired
     private RedisUtil redisUtil;
+    /** JWTUtil 已由静态工具类改为 Spring Bean，密钥从配置读取。 */
+    @Autowired
+    private JWTUtil jwtUtil;
 
     @PostMapping("/login")
     public CommonResult<?> login(@RequestBody User user) {
@@ -34,7 +37,7 @@ public class LoginController {
             userInfo.put("id", loginUser.getId().toString());
             userInfo.put("username", loginUser.getUsername());
             userInfo.put("nickname", loginUser.getNickname());
-            String token = JWTUtil.createToken(userInfo);
+            String token = jwtUtil.createToken(userInfo);
             return CommonResult.success(token);
         }
         return CommonResult.error("账号或密码错误");

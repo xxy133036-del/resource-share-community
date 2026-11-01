@@ -91,15 +91,18 @@ public class MyConfig implements WebMvcConfigurer {
     }
 
     // ==================== 4. Token 拦截器 ====================
-    @Bean
-    public TokenInterceptor tokenInterceptor() {
-        return new TokenInterceptor();
+    // TokenInterceptor 已改为 @Component（构造器注入 JWTUtil），
+    // 不再需要在这里 new，直接注入 Spring 容器里的实例即可。
+    private final TokenInterceptor tokenInterceptor;
+
+    public MyConfig(TokenInterceptor tokenInterceptor) {
+        this.tokenInterceptor = tokenInterceptor;
     }
 
     // ==================== 5. 拦截器注册 ====================
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(tokenInterceptor())
+        registry.addInterceptor(tokenInterceptor)
                 .addPathPatterns("/**")
                 .excludePathPatterns(
                         "/login",

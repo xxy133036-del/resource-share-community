@@ -23,6 +23,9 @@ import java.util.Map;
 public class LoginController {
     @Autowired
     private LoginService loginService;
+    /** JWTUtil 已由静态工具类改为 Spring Bean，密钥从配置读取。 */
+    @Autowired
+    private JWTUtil jwtUtil;
 
     @PostMapping("/login")
     public CommonResult<?> login(@RequestBody admin admin) {
@@ -32,7 +35,7 @@ public class LoginController {
             adminInfo.put("id", loginAdmin.getId().toString());
             adminInfo.put("adminName", loginAdmin.getAdminName());
             adminInfo.put("roleName", loginAdmin.getRoleName());
-            String token = JWTUtil.createToken(adminInfo);
+            String token = jwtUtil.createToken(adminInfo);
             return CommonResult.success(token);
         }
         return CommonResult.error("账号或密码错误");

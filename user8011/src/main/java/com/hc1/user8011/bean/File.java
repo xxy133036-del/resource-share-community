@@ -37,6 +37,7 @@ public class File {
     private Integer commentsCount;
     private Integer downloadsCount;
     private String tags;           // 标签，逗号分隔存储
+    private String fileHash;       // 文件 MD5，用于秒传去重
     @TableField(exist = false)
     private String authorName;   // 作者昵称
     @TableField(exist = false)

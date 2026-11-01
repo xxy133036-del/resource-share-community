@@ -72,3 +72,10 @@ feign:
         read-timeout: 5000
         request-interceptors:
           - com.hc1.admin8012.config.FeignRequestInterceptor
+
+# ---------------- RS256 JWT 签发 / 校验 ----------------
+jwt:
+  private-key-file: ${JWT_PRIVATE_KEY_FILE:}
+  public-key-file: ${JWT_PUBLIC_KEY_FILE:}
+  issuer: 弘创小明
+  expire-minutes: 60

@@ -1,0 +1,276 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: hc1-mysql
+    restart: "no"
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: nacos
+      TZ: Asia/Shanghai
+    command: --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test:
+        ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p123456"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: hc1-redis
+    restart: "no"
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+
+  nacos1:
+    image: nacos/nacos-server:v2.2.3
+    container_name: nacos1
+    hostname: nacos1
+    restart: "no"
+    environment:
+      MODE: cluster
+      NACOS_SERVERS: "nacos1:8848 nacos2:8848 nacos3:8848"
+      PREFER_HOST_MODE: hostname
+      SPRING_DATASOURCE_PLATFORM: mysql
+      MYSQL_SERVICE_HOST: mysql
+      MYSQL_SERVICE_PORT: 3306
+      MYSQL_SERVICE_DB_NAME: nacos
+      MYSQL_SERVICE_USER: root
+      MYSQL_SERVICE_PASSWORD: 123456
+      JVM_XMS: 256m
+      JVM_XMX: 512m
+      TZ: Asia/Shanghai
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  nacos2:
+    image: nacos/nacos-server:v2.2.3
+    container_name: nacos2
+    hostname: nacos2
+    restart: "no"
+    environment:
+      MODE: cluster
+      NACOS_SERVERS: "nacos1:8848 nacos2:8848 nacos3:8848"
+      PREFER_HOST_MODE: hostname
+      SPRING_DATASOURCE_PLATFORM: mysql
+      MYSQL_SERVICE_HOST: mysql
+      MYSQL_SERVICE_PORT: 3306
+      MYSQL_SERVICE_DB_NAME: nacos
+      MYSQL_SERVICE_USER: root
+      MYSQL_SERVICE_PASSWORD: 123456
+      JVM_XMS: 256m
+      JVM_XMX: 512m
+      TZ: Asia/Shanghai
+    ports:
+      - "8849:8848"
+      - "9849:9848"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  nacos3:
+    image: nacos/nacos-server:v2.2.3
+    container_name: nacos3
+    hostname: nacos3
+    restart: "no"
+    environment:
+      MODE: cluster
+      NACOS_SERVERS: "nacos1:8848 nacos2:8848 nacos3:8848"
+      PREFER_HOST_MODE: hostname
+      SPRING_DATASOURCE_PLATFORM: mysql
+      MYSQL_SERVICE_HOST: mysql
+      MYSQL_SERVICE_PORT: 3306
+      MYSQL_SERVICE_DB_NAME: nacos
+      MYSQL_SERVICE_USER: root
+      MYSQL_SERVICE_PASSWORD: 123456
+      JVM_XMS: 256m
+      JVM_XMX: 512m
+      TZ: Asia/Shanghai
+    ports:
+      - "8850:8848"
+      - "9850:9848"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  sentinel:
+    image: bladex/sentinel-dashboard:1.8.0
+    container_name: hc1-sentinel
+    restart: "no"
+    ports:
+      - "8080:8080"
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: hc1-nginx
+    restart: "no"
+    ports:
+      - "80:80"
+    depends_on:
+      - hc1user8011
+      - hc1admin8012
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+
+  hc1admin8012:
+    build:
+      context: .
+      dockerfile: ./admin8012/Dockerfile
+    container_name: hc1admin8012
+    restart: "no"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      nacos1:
+        condition: service_started
+      nacos2:
+        condition: service_started
+      nacos3:
+        condition: service_started
+    ports:
+      - "8012:8012"
+    environment:
+      SPRING_APPLICATION_NAME: admin8012
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: "nacos1:8848,nacos2:8848,nacos3:8848"
+      SPRING_CLOUD_NACOS_DISCOVERY_NAMESPACE: hc1job01
+      SPRING_CLOUD_NACOS_DISCOVERY_USERNAME: nacos
+      SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD: nacos
+      SPRING_CLOUD_SENTINEL_TRANSPORT_DASHBOARD: sentinel:8080
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/hc1db_admin?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: 123456
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      SERVER_PORT: 8012
+      SERVER_SERVLET_CONTEXT_PATH: /admin8012
+      JWT_PRIVATE_KEY_FILE: /run/secrets/jwt_signing_private
+      JWT_PUBLIC_KEY_FILE: /run/secrets/jwt_verifying_public
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+    secrets:
+      - jwt_signing_private
+      - jwt_verifying_public
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  hc1user8011:
+    build:
+      context: .
+      dockerfile: ./user8011/Dockerfile
+    container_name: hc1user8011
+    restart: "no"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      nacos1:
+        condition: service_started
+      nacos2:
+        condition: service_started
+      nacos3:
+        condition: service_started
+    ports:
+      - "8011:8011"
+    environment:
+      SPRING_APPLICATION_NAME: user8011
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: "nacos1:8848,nacos2:8848,nacos3:8848"
+      SPRING_CLOUD_NACOS_DISCOVERY_NAMESPACE: hc1job01
+      SPRING_CLOUD_NACOS_DISCOVERY_USERNAME: nacos
+      SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD: nacos
+      SPRING_CLOUD_SENTINEL_TRANSPORT_DASHBOARD: sentinel:8080
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/hc1db_user?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: 123456
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      SERVER_PORT: 8011
+      SERVER_SERVLET_CONTEXT_PATH: /user8011
+      AI_AGENT_URL: http://ai-agent:8013
+      # Java 用私钥签内部请求，Python 只拿公钥验签。
+      AI_AGENT_PRIVATE_KEY_FILE: /run/secrets/ai_agent_signing_private
+      JWT_PRIVATE_KEY_FILE: /run/secrets/jwt_signing_private
+      JWT_PUBLIC_KEY_FILE: /run/secrets/jwt_verifying_public
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+    secrets:
+      - ai_agent_signing_private
+      - jwt_signing_private
+      - jwt_verifying_public
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  ai-agent:
+    # Python Agent 工程（FastAPI + LangGraph + DeepSeek）。
+    # 代码与 Java 工程平级存放：D:\python\workspace\springbootjobagent
+    # 如需随本仓库一起打包，可把该目录整体拷到 ./springbootjobagent 后改为 build: ./springbootjobagent
+    build:
+      # 注意：build context 不能指向仓库外的相对路径，这里用绝对路径；
+      # 换机器时改成本机上的 Python 工程目录即可。
+      context: D:/python/workspace/springbootjobagent
+      dockerfile: Dockerfile
+    container_name: ai-agent
+    restart: "no"
+    depends_on:
+      - hc1user8011
+      - redis
+      - mysql
+    # 不映射 8013 到宿主机。Compose 同网络容器仍可连接，但业务请求必须有 Java 私钥签发的 RSA 签名。
+    expose:
+      - "8013"
+    # 【安全】密钥不写在本文件：统一从 .env 读取（该文件已被 .gitignore 忽略）。
+    # 生产环境请改用 Nacos 配置中心或 Docker secrets。
+    env_file:
+      # 复用 Python 工程自己的密钥文件（与 Dockerfile 的 build context 同目录）
+      - D:/python/workspace/springbootjobagent/.env
+    environment:
+      APP_PORT: 8013
+      APP_ENV: production
+      # 覆盖 .env 中面向本地开发的连接地址，指向容器网络内的服务
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: hc1db_user
+      MYSQL_USER: root
+      MYSQL_PASSWORD: 123456
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      AGENT_ENGINE: graph
+      # Python 只读取验签公钥，不持有可生成签名的私钥。
+      INTERNAL_CALL_PUBLIC_KEY_FILE: /run/secrets/ai_agent_signing_public
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    secrets:
+      - ai_agent_signing_public
+    volumes:
+      # 业务知识（改规则无需重建镜像）
+      - D:/python/workspace/springbootjobagent/knowledge:/app/knowledge:ro
+
+volumes:
+  mysql_data:
+  redis_data:
+
+secrets:
+  jwt_signing_private:
+    file: ${JWT_SIGNING_PRIVATE_KEY_FILE:?set JWT_SIGNING_PRIVATE_KEY_FILE in .env}
+  jwt_verifying_public:
+    file: ${JWT_VERIFYING_PUBLIC_KEY_FILE:?set JWT_VERIFYING_PUBLIC_KEY_FILE in .env}
+  ai_agent_signing_private:
+    file: ${AI_AGENT_SIGNING_PRIVATE_KEY_FILE:?set AI_AGENT_SIGNING_PRIVATE_KEY_FILE in .env}
+  ai_agent_signing_public:
+    file: ${AI_AGENT_VERIFYING_PUBLIC_KEY_FILE:?set AI_AGENT_VERIFYING_PUBLIC_KEY_FILE in .env}

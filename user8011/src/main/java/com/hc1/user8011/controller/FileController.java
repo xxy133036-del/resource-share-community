@@ -41,11 +41,24 @@ public class FileController {
 
     // 上传文件
     @PostMapping("/uploadFile")
+    @SentinelResource(value = "uploadFileLimit",
+            blockHandler = "uploadFileBlockHandler",
+            fallback = "uploadFileFallback")
     public CommonResult<?> uploadFile(@ModelAttribute File fileEntity,
                                 @RequestParam("file") MultipartFile file
     ) {
         int userid = UserContext.getUserId();
         return  fileService.uploadFile(fileEntity, file, userid);
+    }
+
+    public CommonResult<?> uploadFileBlockHandler(File fileEntity, MultipartFile file, BlockException e) {
+        log.warn("uploadFile 被限流/降级, e={}", e.getClass().getSimpleName());
+        return CommonResult.error("当前上传人数较多，请稍后重试");
+    }
+
+    public CommonResult<?> uploadFileFallback(File fileEntity, MultipartFile file, Throwable t) {
+        log.error("uploadFile 执行异常（fallback）, e={}", t.getMessage(), t);
+        return CommonResult.error("系统繁忙，请稍后重试");
     }
 
     /**

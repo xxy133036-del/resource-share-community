@@ -1,6 +1,7 @@
 package com.hc1.user8011.service.Impl;
 
 
+import cn.hutool.core.util.HexUtil;
 import cn.hutool.core.util.IdUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.hc1.user8011.bean.CommonResult;
@@ -19,8 +20,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URLEncoder;
 import java.nio.file.Files;
+import java.security.MessageDigest;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -162,22 +167,74 @@ public class FileServiceImpl  implements FileService {
     }
 
     private static final String UPLOADFILE_URL = "D:/java/file/doc/";
+
+    /** 单用户上传频率限制：窗口秒数 + 窗口内最大次数 */
+    private static final long UPLOAD_RATE_WINDOW_SECONDS = 60;
+    private static final long UPLOAD_RATE_MAX_COUNT = 20;
+
+    /** 允许上传的文件扩展名白名单 */
+    private static final Set<String> ALLOWED_EXTENSIONS = new HashSet<>(Arrays.asList(
+            "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "md",
+            "zip", "rar", "7z", "png", "jpg", "jpeg", "gif"));
+
     @Override
     public CommonResult<?> uploadFile(File fileEntity, MultipartFile file,Integer userid) {
         try {
+            // 0. 空文件校验
             if (file == null || file.isEmpty()) {
                 return CommonResult.error("请选择要上传的文件");
             }
 
-            // 1. 生成唯一文件名 (雪花ID/UUID + 原始文件名)
+            // 1. 单用户上传频率限制（Redis 固定窗口计数，防同一账号并发刷上传）
+            String rateKey = "upload:rate:" + userid;
+            long uploadCount = redisUtil.incr(rateKey, 1);
+            if (uploadCount == 1) {
+                redisUtil.expire(rateKey, UPLOAD_RATE_WINDOW_SECONDS);
+            }
+            if (uploadCount > UPLOAD_RATE_MAX_COUNT) {
+                redisUtil.decr(rateKey, 1); // 回滚本次计数，避免占用配额
+                return CommonResult.error("上传过于频繁，请稍后再试");
+            }
+
+            // 2. 生成唯一文件名 (雪花ID + 原始文件名)
             String originalFilename = file.getOriginalFilename();
             String uniqueFileName = IdUtil.getSnowflakeNextIdStr() + "_" + originalFilename;
             java.io.File destFile = new java.io.File(UPLOADFILE_URL + uniqueFileName);
 
-            // 2. 将文件流写入本地磁盘
-            file.transferTo(destFile);
+            // 3. 流式写入：先读文件头做魔数校验，再边算 MD5 边落盘（不把整个文件读进内存）
+            String fileHash;
+            try (InputStream in = file.getInputStream()) {
+                byte[] header = new byte[8];
+                int headerRead = in.read(header);
+                if (headerRead <= 0) {
+                    return CommonResult.error("文件内容为空");
+                }
+                if (!isAllowedFileType(header, headerRead, originalFilename)) {
+                    return CommonResult.error("不支持的文件类型，或文件内容与扩展名不符");
+                }
+                MessageDigest md5 = MessageDigest.getInstance("MD5");
+                md5.update(header, 0, headerRead);
+                try (OutputStream out = new FileOutputStream(destFile)) {
+                    out.write(header, 0, headerRead);
+                    byte[] buf = new byte[8192];
+                    int n;
+                    while ((n = in.read(buf)) != -1) {
+                        md5.update(buf, 0, n);
+                        out.write(buf, 0, n);
+                    }
+                }
+                fileHash = HexUtil.encodeHexStr(md5.digest());
+            }
+
+            // 4. 秒传去重：相同 MD5 的文件已存在则复用，不重复占用磁盘
+            File existing = fileMapper.selectByFileHash(fileHash);
+            if (existing != null) {
+                destFile.delete();
+                return CommonResult.success("文件已存在，秒传成功");
+            }
 
             fileEntity.setFileUrl(uniqueFileName);
+            fileEntity.setFileHash(fileHash);
             insert(fileEntity, userid);
             userService.addPointsFiveById(userid);
 
@@ -190,6 +247,48 @@ public class FileServiceImpl  implements FileService {
             log.error("上传文件失败, userId={}", userid, e);
             return CommonResult.error("服务器存储异常：" + e.getMessage());
         }
+    }
+
+    /** 扩展名白名单 + 魔数校验（防把可执行文件伪装成图片/文档） */
+    private boolean isAllowedFileType(byte[] header, int len, String filename) {
+        String ext = "";
+        if (filename != null && filename.contains(".")) {
+            ext = filename.substring(filename.lastIndexOf(".") + 1).toLowerCase();
+        }
+        if (!ALLOWED_EXTENSIONS.contains(ext)) {
+            return false;
+        }
+        switch (ext) {
+            case "pdf":
+                return startsWith(header, len, 0x25, 0x50, 0x44, 0x46);
+            case "png":
+                return startsWith(header, len, 0x89, 0x50, 0x4E, 0x47);
+            case "jpg":
+            case "jpeg":
+                return startsWith(header, len, 0xFF, 0xD8, 0xFF);
+            case "gif":
+                return startsWith(header, len, 0x47, 0x49, 0x46, 0x38);
+            case "zip":
+            case "docx":
+            case "xlsx":
+            case "pptx":
+                return startsWith(header, len, 0x50, 0x4B);
+            default:
+                // txt/md/doc/xls/ppt/rar/7z 等不严格校验魔数，仅按扩展名放行
+                return true;
+        }
+    }
+
+    private boolean startsWith(byte[] data, int len, int... expected) {
+        if (len < expected.length) {
+            return false;
+        }
+        for (int i = 0; i < expected.length; i++) {
+            if ((data[i] & 0xFF) != expected[i]) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override

@@ -11,7 +11,7 @@ import java.util.List;
 @Mapper
 public interface FileMapper extends BaseMapper<File> {
 
-    @Insert("insert into file_info (file_name,description,file_url,user_id,tags) values (#{file.fileName},#{file.description},#{file.fileUrl},#{userid},#{file.tags})")
+    @Insert("insert into file_info (file_name,description,file_url,user_id,tags,file_hash) values (#{file.fileName},#{file.description},#{file.fileUrl},#{userid},#{file.tags},#{file.fileHash})")
     int insert(@Param("file") File file,@Param("userid") int userid);
 
     @Update("update file_info set downloads_count = downloads_count + #{count} where file_url = #{fileUrl}")
@@ -19,6 +19,9 @@ public interface FileMapper extends BaseMapper<File> {
 
     @Select("select * from file_info where file_url = #{fileUrl}")
     File selectByFileUrl(String fileUrl);
+
+    @Select("select * from file_info where file_hash = #{fileHash} limit 1")
+    File selectByFileHash(String fileHash);
 
     @Update("update file_info set comments_count = comments_count + #{count} where id = #{id}")
     void addCommentsCountBatch(@Param("id") int id,@Param("count") int count);

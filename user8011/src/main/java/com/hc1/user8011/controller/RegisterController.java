@@ -23,6 +23,9 @@ import java.util.Map;
 public class RegisterController {
     @Autowired
     private RegisterService registerService;
+    /** JWTUtil 已由静态工具类改为 Spring Bean，密钥从配置读取。 */
+    @Autowired
+    private JWTUtil jwtUtil;
 
     @PostMapping("/register")
     public CommonResult<?> register(@RequestBody User user) {
@@ -53,7 +56,7 @@ public class RegisterController {
             userInfo.put("username", registeredUser.getUsername());
             userInfo.put("nickname", registeredUser.getNickname());
 
-            String token = JWTUtil.createToken(userInfo);
+            String token = jwtUtil.createToken(userInfo);
             return CommonResult.success(token);
         } catch (Exception e) {
             e.printStackTrace();

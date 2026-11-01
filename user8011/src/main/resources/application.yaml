@@ -90,5 +90,20 @@ mybatis-plus:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl # 控制台打印底层 SQL (开发环境推荐)
   type-aliases-package: "com.hc1.user8011.bean" # 实体类包别名扫描路径
 
+# ---------------- RS256 JWT 签发 / 校验 ----------------
+jwt:
+  private-key-file: ${JWT_PRIVATE_KEY_FILE:}
+  public-key-file: ${JWT_PUBLIC_KEY_FILE:}
+  issuer: 弘创小明
+  expire-minutes: 60
+
 ai-agent:
   url: http://localhost:8013
+  # Java 用此 RSA 私钥签内部请求；Python 仅持有对应公钥。
+  private-key-file: ${AI_AGENT_PRIVATE_KEY_FILE:}
+  connect-timeout: 5000
+  # 流式场景下代表"两次数据之间的最大间隔"，不是总时长
+  read-timeout: 300000
+  ask-timeout: 120000
+  stream-pool-size: 8
+  max-question-length: 1000

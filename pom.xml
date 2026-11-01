@@ -42,6 +42,11 @@
         <sentinel.version>1.8.0</sentinel.version>
     </properties>
 
+    <modules>
+        <module>user8011</module>
+        <module>admin8012</module>
+    </modules>
+
     <dependencyManagement>
         <dependencies>
             <dependency>
